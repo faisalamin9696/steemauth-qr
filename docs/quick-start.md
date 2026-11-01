@@ -38,7 +38,7 @@ if (result.success) {
 auth.dispose();
 ```
 
-> ⚠️ **`createQrSession` resolves only when the message plane is live** — never
+> ⚠️ **`createQrSession` resolves only when the relay room is live** — never
 > show a QR before that, or you can miss the phone's `ready` announcement.
 > If the relay is unreachable it throws after `subscribeTimeoutMs` (15 s).
 
@@ -48,8 +48,8 @@ auth.dispose();
    WebCrypto and encoded into the QR — along with the relay URL and your
    page's **verified origin** (captured from `window.location.origin`, not
    settable).
-2. The browser subscribed to the QR’s plane endpoint (`sup`) **before** the QR was
-   rendered.
+2. The browser created the relay room `rm` and joined it with its own token
+   before the QR was rendered.
 3. The phone scanned, validated the payload (version, TTL, chain), joined the
    same room and sent `ready` — encrypted with `k`.
 4. `transfer("bob", "1.500")` built the operations, validated them against

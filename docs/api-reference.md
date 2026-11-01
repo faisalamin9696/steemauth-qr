@@ -18,7 +18,7 @@ new SteemAuthSession(options: SteemAuthSessionOptions)
 connect(): Promise<void>                    // plane stream live (retryable, typed)
 dispose(): void
 get connectionStatus / account / isRevoked / revocationReason
-get expiresAt / pendingCount / channel / payload: SessionQrPayload
+get expiresAt / pendingCount / payload: SessionQrPayload
 get restoredRequest: Promise<KeychainResult> | null   // resume()'s re-issued request
 
 // refresh survival (opt-in persistSession)

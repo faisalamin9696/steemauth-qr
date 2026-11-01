@@ -88,8 +88,8 @@ Inside `payload.c`, every message carries `sid`:
 | Direction | Type | Fields |
 |---|---|---|
 | phone → app | `ready` | `account`, `authority`, `device?` — the handshake, as a row |
-| app → phone | `request` | `id`, `ops` (≤ 20), `sign?`, `notify?`, `action?`, `meta?`, `exp?` |
-| phone → app | `result` | `id`, `ok`, `txId?`, `error?`, `account?`, `signature?`, `notify?` |
+| app → phone | `request` | `id`, `ops` (≤ 20), `sign?`, `action?`, `meta?`, `exp?` |
+| phone → app | `result` | `id`, `ok`, `txId?`, `error?`, `account?`, `signature?` |
 | either | `cancel` | `id`, `reason?` |
 | phone → app | `revoke` | `reason?` — the user removed this app; session over |
 | either | `ping` / `pong` | keepalive |

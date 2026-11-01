@@ -85,12 +85,12 @@ export interface SignRequest {
   keyType?: KeyType;
 }
 
-/** Realtime messages, AES-encrypted with `k`, on channel `steemauth:{sid}`. */
+/** Realtime messages, AES-encrypted with `k`, in the relay room `rm`. */
 export type SessionMessage =
   /**
-   * mobile → app: session established, account selected. (v2: the plane
-   * endpoint comes from the QR's `sup`, so no transport negotiation is
-   * needed — the handshake itself travels as a row on the plane.)
+   * mobile → app: session established, account selected. (v3: the relay
+   * URL/room/token come from the QR's `rt`/`rm`/`tk`, so no transport
+   * negotiation is needed - the handshake travels in the room.)
    */
   | {
       type: 'ready';

@@ -64,13 +64,15 @@ the page that generated the QR, captured automatically from
 
 ```jsonc
 {
-  "v": 2, "t": "steem.session",
+  "v": 3, "t": "steem.session",
   "sid": "<uuid>",
   "app": "My dApp",
   "url": "https://your.app",       // declared (informational)
   "src": "https://your.app",       // verified — automatic, non-overridable
   "chain": "steem",
-  "sup": { "url": "https://…", "key": "…" }, // plane endpoint (auto)
+  "rt": "wss://relay.steempro.com", // relay URL (ws(s)://)
+  "rm": "rm_…",                 // unguessable room (~176 bits)
+  "tk": "tok_…",                 // the phone's room token (app keeps its own)
   "k": "<base64, 32 bytes>",
   "ts": 1712345678900, "exp": 1712345738900
 }
@@ -78,7 +80,8 @@ the page that generated the QR, captured automatically from
 
 ## Size & scannability
 
-The payload is ~230 bytes — any QR version encodes it. Practical rules:
+The payload is ~400 bytes (≤450 with `account`) — a small QR version
+encodes it at any error-correction level. Practical rules:
 
 - render ≥ 240 px on screen; keep the default margin (4 modules);
 - use error correction `M` normally, `H` only if you overlay a logo;

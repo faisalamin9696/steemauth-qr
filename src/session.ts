@@ -121,7 +121,7 @@ export class SteemAuthSession {
   private joined = false;
   /** In-flight `connect()` promise, memoized so concurrent calls share it. */
   private connecting: Promise<void> | null = null;
-  /** Durable transport (protocol v2) — started when the phone announces `mp`. */
+  /** Durable transport (protocol v3) - the relay room, started in connect(). */
   private plane: MessagePlane | null = null;
   /** Re-issued request of a resumed session (never rejects — see resume()). */
   private _restoredRequest: Promise<KeychainResult> | null = null;
@@ -413,7 +413,7 @@ export class SteemAuthSession {
     }
   }
 
-  /** Tear down the message plane and reject any pending requests. */
+  /** Tear down the relay connection and reject any pending requests. */
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -462,7 +462,7 @@ export class SteemAuthSession {
     this.setStatus('revoked');
   }
 
-  /** Close the message plane (dispose / revocation / failed attempt). */
+  /** Close the relay room (dispose / revocation / failed attempt). */
   private teardownPlane(): void {
     this.plane?.close();
     this.plane = null;
@@ -908,9 +908,9 @@ export class SteemAuthSession {
         break;
       }
       case 'revoke': {
-        // The user removed this app in the authenticator — either delivered
-        // live over the relay, or discovered via the sessions-table watch.
-        this.applyRevocation(message.reason ?? message.reason ?? 'Access was revoked in the authenticator.');
+        // The user removed this app in the authenticator — delivered live
+        // over the relay, or replayed from the room log after a reconnect.
+        this.applyRevocation(message.reason ?? 'Access was revoked in the authenticator.');
         break;
       }
       case 'ping':
@@ -924,7 +924,7 @@ export class SteemAuthSession {
 
 // ---------------------------------------------------------------------------
 // Session persistence (opt-in via `persistSession`) — the refresh/resume
-// story. One snapshot: the payload, the handshake (ready/mp/watch endpoints)
+// story. One snapshot: the payload, the handshake (ready/result endpoints)
 // and the in-flight request. Bounded by the QR TTL, cleared by dispose.
 // ---------------------------------------------------------------------------
 

@@ -18,7 +18,7 @@ what to do about it.
 |---|---|
 | `Timed out joining the relay room — check the relayUrl and network` (`plane-timeout`) | bad URL, offline, relay down. `connect()` is retryable |
 | `Relay connection failed — check the relayUrl and network` (`plane-failed`) | subscribe failed — is your relay running? self-hosted: check `STORE`/DB |
-| `Realtime connection lost — request a fresh QR code.` | the phone noticed the room died — rebuild the session |
+| `Relay room expired - generate a fresh QR code` (`plane-timeout`) | the phone noticed the room died — rebuild the session |
 
 ## Requests
 
@@ -48,7 +48,7 @@ what to do about it.
 ## QR codes
 
 - Expired codes are refused with *"refresh it"* — rebuild the session.
-- ~230 bytes payload; render ≥ 240 px, keep margin 4, don't scale the SVG
+- ~400 bytes payload; render ≥ 240 px, keep margin 4, don't scale the SVG
   below its module grid (the #1 scan failure).
 - Scanning fails in bright light / low contrast? Force `dark`/`light` to
   high-contrast colors; use `errorCorrectionLevel: "H"` under a logo.

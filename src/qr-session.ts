@@ -1,8 +1,8 @@
 /**
  * createQrSession() — the all-in-one, zero-config entry point.
  *
- * One call resolves the plane endpoint (runtime discovery when none is
- * configured), builds the session, subscribes to the message plane and
+ * One call resolves the relay URL (default when none is
+ * configured), builds the session, joins the relay room and
  * renders the QR in both SVG and PNG forms — a single await:
  *
  *   const auth = await createQrSession({ appName: "My dApp" });
@@ -12,7 +12,7 @@
  *   const result = await auth.session.request(requestTransfer(account, "bob", "1.000"));
  *   auth.dispose();
  *
- * If anything fails (no endpoint discoverable, plane unreachable, QR render
+ * If anything fails (no relay URL configured, plane unreachable, QR render
  * error) the session is disposed before the error propagates — no leaks.
  */
 import { SteemAuthSession, type SteemAuthSessionOptions } from './session';

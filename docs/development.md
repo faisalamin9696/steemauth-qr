@@ -43,8 +43,8 @@ npm publish           # prepublishOnly: typecheck + test + build
 | `verify-e2e` | **offline**: an injected in-memory relay (same per-room seq/replay/no-echo contract) with a scripted phone using the app’s real crypto: ready → request → approve/reject/cancel → revoke → resume → typed errors → controller state machine |
 | `verify-relay-plane` | **live, local, no credentials**: boots a REAL relay (in-process) and drives REAL sockets — full session loop with the real mobile crypto, resume + re-issue, bad-token bans, phone-token rotation, forged-envelope drops, room isolation, revocation |
 
-CI needs the sibling checkouts (and secrets only for the live suite) so
-protocol drift fails the build.
+CI needs the sibling checkouts — all suites run offline or on loopback with
+no credentials, so protocol drift fails the build.
 
 ## Layout
 

@@ -48,7 +48,7 @@ Helpers:
 - `c` — the same serialized QR payload a camera scan encodes (the QR's inner
   string). Both transports carry the identical payload, so the app validates
   it identically either way: protocol version, expiry, clock skew (±60s),
-  message-plane endpoint, chain, blocklist, target account.
+  relay URL/room/token, chain, blocklist, target account.
 
 App-side mirror: `HANDOFF_TYPE` in the app's `src/lib/protocol.ts` (the app
 keeps its own protocol constants and never imports this package). Any app

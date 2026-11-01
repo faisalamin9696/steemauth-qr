@@ -21,9 +21,9 @@ export type SteemAuthErrorCode =
   | 'invalid-request'
   /** No answer from the phone within the request timeout. */
   | 'timeout'
-  /** The message-plane subscribe/join took too long. */
+  /** The relay-room join took too long. */
   | 'plane-timeout'
-  /** The message plane failed (subscribe error, insert/send failure). */
+  /** The relay connection failed (join error, send failure). */
   | 'plane-failed';
 
 export class SteemAuthError extends Error {

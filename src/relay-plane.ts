@@ -298,7 +298,7 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
       return cursor;
     },
     async send(payload: unknown): Promise<void> {
-      if (closed) throw new SteemAuthError('plane-failed', 'Message plane closed');
+      if (closed) throw new SteemAuthError('plane-failed', 'Relay room closed');
       if (!isEnvelope(payload)) {
         throw new SteemAuthError('invalid-request', 'Request not sent — malformed envelope');
       }
@@ -307,7 +307,7 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
       }
       await ready; // never send before the first pull completed
       if (!connected || !ws || ws.readyState !== 1) {
-        throw new SteemAuthError('plane-failed', 'Message plane not connected');
+        throw new SteemAuthError('plane-failed', 'Relay room not connected');
       }
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -332,8 +332,8 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
       closed = true;
       if (handshakeTimer) clearTimeout(handshakeTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      failHandshake(new SteemAuthError('plane-failed', 'Message plane closed'));
-      while (outbox.length) rejectSend(new SteemAuthError('plane-failed', 'Message plane closed'));
+      failHandshake(new SteemAuthError('plane-failed', 'Relay room closed'));
+      while (outbox.length) rejectSend(new SteemAuthError('plane-failed', 'Relay room closed'));
       try {
         ws?.close();
       } catch {

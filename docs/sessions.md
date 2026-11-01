@@ -27,7 +27,7 @@ Construction generates `sid` + `k` from WebCrypto and validates options
 ## Connecting
 
 ```ts
-await session.connect();   // resolves when the message plane is LIVE
+await session.connect();   // resolves when the relay room is LIVE
 showQr(session.qrString);
 ```
 
@@ -55,7 +55,7 @@ connecting ──▶ waiting ──▶ ready            phone scans (waitForAcco
 
 Getters: `session.connectionStatus`, `session.account` (`string | null`),
 `session.isRevoked`, `session.revocationReason`, `session.pendingCount`,
-`session.expiresAt`, `session.channel`, `session.payload`.
+`session.expiresAt`, `session.payload`.
 
 ## The account handshake
 
@@ -128,7 +128,7 @@ if (session) {
 The controller and the hook do this automatically: set
 `persistSession: true` in the options and `start()` resumes before minting a
 new session. `controller.restoredRequest` exposes the re-issued request.
-Resume restores the account (no second scan), the message plane and the
+Resume restores the account (no second scan), the relay room and the
 revocation watch, and re-sends the pending request **with the same id** —
 receivers key pending state by id, so it's a re-show, not a duplicate.
 

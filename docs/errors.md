@@ -32,8 +32,8 @@ try {
 | `session-expired` | the QR TTL passed | `Session expired — generate a fresh QR code` |
 | `invalid-request` | failed validation **before sending** | `Request not sent — Unsupported operation: wormhole` |
 | `timeout` | no answer from the phone in time | `Timed out waiting for the mobile app…` |
-| `plane-timeout` | plane subscribe took too long | `Timed out joining the message plane…` |
-| `plane-failed` | message plane failed (subscribe/insert) | `Message plane connection failed…` |
+| `plane-timeout` | relay-room join took too long | `Timed out joining the relay room - check the relayUrl and network` |
+| `plane-failed` | relay connection failed (join/send) | `Relay connection failed - check the relayUrl and network` |
 
 `isSteemAuthError(e)` works across bundle copies (checks shape, not
 identity). The `cause` of wrapped errors is preserved on `e.cause`.
