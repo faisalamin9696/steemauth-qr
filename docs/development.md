@@ -14,7 +14,7 @@ sources through **one module, `scripts/mobile.ts`**, which resolves the
 checkout in this order:
 
 1. `STEEMAUTHENTICATOR_DIR` env var (explicit override — use this in CI)
-2. `E:\sa` — the app's current local home
+2. `E:\SteemAuth` — the app's current local home
 3. `../SteemAuthenticator` — the classic sibling layout
 
 First hit containing `src/lib/protocol.ts` wins; a miss fails with the
