@@ -6,8 +6,9 @@
  * the tests tautological). Resolution order:
  *
  *   1. STEEMAUTHENTICATOR_DIR          (explicit override, any machine/CI)
- *   2. ../../../SteemAuth              (current local home of the app)
- *   3. ../../SteemAuthenticator        (the documented sibling layout)
+ *   2. ../../../SteemAuth              (the app's new home — post-rename)
+ *   3. ../../../sa                     (the app's pre-rename home)
+ *   4. ../../SteemAuthenticator        (the documented sibling layout)
  *
  * The first candidate containing src/lib/protocol.ts wins; if none do, the
  * error says exactly which paths were tried. Moving the app again = one env
@@ -26,8 +27,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 const candidates = [
   process.env.STEEMAUTHENTICATOR_DIR,
-  resolve(HERE, '..', '..', '..', 'SteemAuth'), // new home of the app
-  resolve(HERE, '..', '..', '..', 'sa'), // current home of the app
+  resolve(HERE, '..', '..', '..', 'SteemAuth'), // the app lives here
   resolve(HERE, '..', '..', 'SteemAuthenticator'), // documented sibling layout
 ].filter((c): c is string => Boolean(c));
 
