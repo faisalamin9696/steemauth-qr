@@ -4,6 +4,7 @@
   "description": "Generate SteemAuthenticator QR sessions and request Steem actions (broadcast/vote/transfer/...) from the browser, SteemKeychain-style. Mobile approval + on-device signing via the SteemAuthenticator app.",
   "keywords": [
     "steem",
+    "steemauth",
     "steempro",
     "keychain",
     "qr",
@@ -11,8 +12,8 @@
     "steemauthenticator",
     "blockchain",
     "signing",
-    "supabase",
-    "realtime"
+    "websocket",
+    "relay"
   ],
   "license": "MIT",
   "repository": {
