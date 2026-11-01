@@ -45,7 +45,7 @@ the relay (at room registration), so a QR leak never exposes the app side.
 ## Transport: the relay room
 
 All traffic rides one WebSocket connection per side to `rt`, addressed by
-room. The relay (steemauth-relay v2, protocol v3) keeps each room as a
+room. The relay (steemauth-relay v3, protocol v3) keeps each room as a
 sequenced log:
 
 ```
