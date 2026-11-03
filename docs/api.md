@@ -148,6 +148,46 @@ Inside the authenticator's in-app browser the payload goes through the
 WebView bridge; in external mobile browsers a `steemauth://` intent carries
 it; on desktop it returns `"none"` and you show the QR.
 
+## Revocation watch (registry-backed)
+
+```ts
+watchRevocation(options): RevocationWatch
+RevocationWatchOptions { sid: string; relayUrl?: string; onRevoked(reason: string): void }
+RevocationWatch { close(): void; readonly closed: Promise<void> }
+```
+
+Logs the user out the moment they revoke your app from the
+SteemAuthenticator **Sessions tab** — even after the relay room is long
+gone. Pass the `sid` the account **logged in with** (the registry rows are
+keyed by it; the session's own sid changes on `refresh()`).
+
+How it works: the relay optionally holds the session registry (Supabase
+lives *only* inside the relay — no credential, no row, nothing on the
+client). Your watch sends `{ t:"watch", sid }`; when the phone writes
+`revoked_at`, the relay pushes `{ t:"revoked", sid, reason }` and
+`onRevoked` fires **once** with the phone's reason.
+
+```ts
+const watch = watchRevocation({
+  sid: account.sid!,                        // login sid, stored at sign-in
+  onRevoked: (reason) => signOut(reason),   // your action — toast, redirect …
+});
+watch.close();                              // on logout / unmount
+```
+
+Notes:
+
+- **Fail-open** — a relay without a registry (or an older relay) refuses
+  the frame and the watch closes silently; revokes inside a live room are
+  still delivered over the room path.
+- **Reconnects** — dropped sockets are retried with capped backoff
+  (1 s → 30 s) and the relay re-checks the registry on every watch, so a
+  revoke that happened while offline still fires on reconnect.
+- `closed` resolves when the watch is finished (revoked, refused, or
+  `close()`); `sid` must be a UUID (throws `invalid-request` otherwise).
+- `relayUrl` defaults to `DEFAULT_RELAY_URL`; pass the URL your sessions
+  actually use when self-hosting the relay.
+
 ## QR rendering
 
 ```ts
@@ -211,13 +251,13 @@ handshake) · `request` (id, ops ≤ 20, sign?, meta?, exp?) · `result` (id,
 ok, txId?, error?, signature?) · `cancel` · `revoke` · `ping`/`pong`.
 
 **Revocation watch** (Supabase-backed): after the handshake, the package
-sends `{ t:"watch", sid }` to the relay. The relay polls Supabase for
-`revoked_at` changes on that sid (batched, only while watchers exist)
-and pushes `{ t:"revoked", sid, reason }` when the user revokes from the
-mobile app's Sessions tab. Credentials never leave the relay process.
-One-shot: once revoked, the sid is removed from watchers. This works even
-after the relay room expires — the watch connection is independent of the
-room lifecycle.
+sends `{ t:"watch", sid }` to the relay — and `watchRevocation()` (above)
+opens the same watch for a *login* sid outside any session. The relay
+polls Supabase for `revoked_at` changes (batched, only while watchers
+exist, plus an immediate catch-up on every watch) and pushes
+`{ t:"revoked", sid, reason }` to all watching sockets. Credentials never
+leave the relay process. One-shot: once revoked, the sid is removed from
+watchers. The watch outlives the room — it needs no room membership.
 
 v1/v2 payloads are refused by the version check on both sides.
 

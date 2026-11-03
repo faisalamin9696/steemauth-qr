@@ -15,12 +15,14 @@
  * Run: npx tsx scripts/verify-relay-plane.ts
  */
 import { createRelayServer } from '../../steemauth-relay/server.js';
+import { createServer as createHttpServer } from 'node:http';
 import { SteemAuthSession } from '../src/session';
 import {
   createRelayPlane,
   MAX_ENVELOPE_BYTES,
   type MessagePlane,
 } from '../src/relay-plane';
+import { watchRevocation } from '../src/revocation';
 import {
   generateRoom,
   generateToken,
@@ -43,6 +45,16 @@ function check(name: string, ok: boolean, extra?: unknown) {
     failures++;
     if (extra !== undefined) console.log('      ', JSON.stringify(extra));
   }
+}
+
+/** Poll until `cond` holds — revocation lands within a poll tick of the relay. */
+async function until(cond: () => boolean, timeoutMs = 5_000): Promise<boolean> {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    if (cond()) return true;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return cond();
 }
 
 /** Raw relay client for security probes (frames, not the plane client). */
@@ -356,6 +368,109 @@ async function main() {
     }
   } finally {
     await relay2.close();
+  }
+
+  // ---- 4. SUPABASE REVOCATION WATCH — the relay holds the registry -------
+  // The relay polls a Supabase-shaped endpoint; the client never sees one
+  // (no credential, no row — just the watch/revoked frames).
+  {
+    const registry: Array<Record<string, unknown>> = [];
+    const mock = createHttpServer((req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(registry));
+    });
+    const mockPort = await new Promise<number>((resolve, reject) => {
+      mock.once('error', reject);
+      mock.listen(0, '127.0.0.1', () => resolve((mock.address() as { port: number }).port));
+    });
+
+    const revRelay = createRelayServer({
+      roomIdleMs: 30 * 60_000,
+      sweepIntervalMs: 60_000,
+      supabaseUrl: `http://127.0.0.1:${mockPort}`,
+      supabaseKey: 'anon-test-key',
+      revocationPollMs: 200,
+    });
+    try {
+      const revPort = await revRelay.listen(0, '127.0.0.1');
+      const revUrl = `ws://127.0.0.1:${revPort}`;
+
+      // 4a. The session auto-watches its sid: a registry revoke flips it —
+      // even though no room message was ever sent.
+      const session = new SteemAuthSession({
+        appName: 'RevWatch',
+        relayUrl: revUrl,
+        requestTimeoutMs: 8_000,
+        subscribeTimeoutMs: 5_000,
+      });
+      await session.connect();
+      const phone = phoneOnRoom(revUrl, session.payload.rm, session.payload.tk, session.payload.k);
+      await phone.send({ type: 'ready', sid: session.payload.sid, account: 'alice', authority: 'posting' });
+      await session.waitForAccount();
+
+      registry.push({
+        sid: session.payload.sid,
+        revoked_at: new Date().toISOString(),
+        revoked_reason: 'Revoked from the Sessions tab',
+      });
+      const flipped = await until(() => session.connectionStatus === 'revoked');
+      check('registry revoke flips the connected session (auto watch)', flipped, session.connectionStatus);
+      session.dispose();
+      phone.close();
+
+      // 4b. The standalone helper — the ACCOUNT-level watch keyed by the
+      // LOGIN sid (survives session refresh + room death).
+      const helperSid = '11111111-2222-3333-4444-555555555555';
+      let helperReason: string | null = null;
+      const watch = watchRevocation({
+        sid: helperSid,
+        relayUrl: revUrl,
+        onRevoked: (r) => {
+          helperReason = r;
+        },
+      });
+      registry.push({
+        sid: helperSid,
+        revoked_at: new Date().toISOString(),
+        revoked_reason: 'Signed out from the phone',
+      });
+      const helperFired = await Promise.race([
+        watch.closed.then(() => true),
+        new Promise<boolean>((r) => setTimeout(() => r(false), 5_000)),
+      ]);
+      check(
+        'watchRevocation() fires onRevoked with the registry reason',
+        helperFired && helperReason === 'Signed out from the phone',
+        helperReason,
+      );
+      watch.close(); // idempotent after the terminal event
+
+      // 4c. Fail-open: a relay WITHOUT a registry refuses the frame and the
+      // helper closes silently — no throw, no callback, no retry storm.
+      let refusedFired = false;
+      const plainRelay = createRelayServer({ roomIdleMs: 30 * 60_000, sweepIntervalMs: 60_000 });
+      try {
+        const plainPort = await plainRelay.listen(0, '127.0.0.1');
+        const refused = watchRevocation({
+          sid: helperSid,
+          relayUrl: `ws://127.0.0.1:${plainPort}`,
+          onRevoked: () => {
+            refusedFired = true;
+          },
+        });
+        const closedQuietly = await Promise.race([
+          refused.closed.then(() => true),
+          new Promise<boolean>((r) => setTimeout(() => r(false), 5_000)),
+        ]);
+        check('relay without a registry: watch fails open silently', closedQuietly && !refusedFired);
+        refused.close();
+      } finally {
+        await plainRelay.close();
+      }
+    } finally {
+      await revRelay.close();
+      await new Promise<void>((resolve) => mock.close(() => resolve()));
+    }
   }
 
   console.log(failures === 0 ? '\nAll relay-plane checks passed ✔' : `\n${failures} check(s) FAILED ✘`);

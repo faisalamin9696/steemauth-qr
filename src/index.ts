@@ -22,6 +22,13 @@ export {
   type RelayPlaneStatus,
 } from './relay-plane';
 
+// Registry-backed revocation watch (Supabase lives only in the relay)
+export {
+  watchRevocation,
+  type RevocationWatch,
+  type RevocationWatchOptions,
+} from './revocation';
+
 // Typed errors — branch on `code` instead of message strings
 export {
   SteemAuthError,
