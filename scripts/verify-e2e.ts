@@ -17,6 +17,7 @@
  */
 import { SteemAuthSession } from '../src/session';
 import { createQrSession } from '../src/qr-session';
+import { steemAuth } from '../src/steemAuth';
 import { SteemAuthController } from '../src/controller';
 import {
   MAX_ENVELOPE_BYTES,
@@ -984,6 +985,115 @@ async function main() {
     phone3.close();
   } finally {
     // offline harness — no server to shut down
+  }
+
+  // ---- 15. steemAuth(): the ready-to-use one-call API ---------------------
+  const oneCall = {
+    session: {
+      planeFactory: memoryRelayFactory,
+      requestTimeoutMs: 4000,
+      subscribeTimeoutMs: 5000,
+    },
+  };
+
+  // (a) request mode: QR → scan → approve → txId, auto-disposed.
+  {
+    let rendered = '';
+    const pending = steemAuth({
+      appName: 'OneCall',
+      ...oneCall,
+      request: requestVote('alice', 'bob', 'one-call', 10),
+      onQr: (svg) => {
+        rendered = svg;
+      },
+      onSession: (s) => {
+        const mock = mobileMock(s.payload.rm, s.payload.k);
+        void (async () => {
+          await mock.send({ type: 'ready', sid: s.payload.sid, account: 'alice', authority: 'posting' });
+          const req = await mock.next();
+          if (req.type !== 'request') throw new Error('unreachable');
+          mock.send({ type: 'result', sid: s.payload.sid, id: req.id, ok: true, txId: '11'.repeat(20) });
+          mock.close();
+        })();
+      },
+    });
+    const r = await pending;
+    check(
+      'steemAuth() request mode: approved → txId',
+      r.success && r.account === 'alice' && r.txId === '11'.repeat(20),
+      r,
+    );
+    check('steemAuth() delivered the QR to onQr', rendered.includes('<svg'));
+  }
+
+  // (b) login mode: challenge signed, message/nonce/signature returned.
+  {
+    const pending = steemAuth({
+      appName: 'OneCallLogin',
+      ...oneCall,
+      login: true,
+      statement: 'One-line login',
+      onSession: (s) => {
+        const mock = mobileMock(s.payload.rm, s.payload.k);
+        void (async () => {
+          await mock.send({ type: 'ready', sid: s.payload.sid, account: 'alice', authority: 'posting' });
+          const req = await mock.next();
+          if (req.type !== 'request') throw new Error('unreachable');
+          mock.send({ type: 'result', sid: s.payload.sid, id: req.id, ok: true, account: 'alice', signature: 'ab'.repeat(65) });
+          mock.close();
+        })();
+      },
+    });
+    const r = await pending;
+    check(
+      'steemAuth() login mode: signed challenge back',
+      r.success &&
+        r.signature === 'ab'.repeat(65) &&
+        (r.message ?? '').includes('One-line login') &&
+        (r.nonce ?? '').length > 0 &&
+        typeof r.expiresAt === 'number',
+      r,
+    );
+  }
+
+  // (c) connect-only mode: no request → the account is the result.
+  {
+    const pending = steemAuth({
+      appName: 'OneCallConnect',
+      ...oneCall,
+      onSession: (s) => {
+        const mock = mobileMock(s.payload.rm, s.payload.k);
+        void (async () => {
+          await mock.send({ type: 'ready', sid: s.payload.sid, account: 'alice', authority: 'posting' });
+          mock.close();
+        })();
+      },
+    });
+    const r = await pending;
+    check(
+      'steemAuth() connect-only: resolves with the account',
+      r.success && r.account === 'alice',
+      r,
+    );
+  }
+
+  // (d) contradictory options fail fast.
+  {
+    let bothErr = '';
+    try {
+      await steemAuth({
+        appName: 'Both',
+        login: true,
+        request: requestVote('alice', 'bob', 'p', 1),
+      });
+    } catch (e) {
+      bothErr = (e as Error).message;
+    }
+    check(
+      'steemAuth() refuses login + request together',
+      bothErr.includes('not both'),
+      bothErr,
+    );
   }
 
   console.log(

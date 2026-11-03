@@ -50,6 +50,13 @@ export {
   type SteemAuthState,
 } from './controller';
 
+// Ready-to-use entry point: QR → phone → result in ONE call
+export {
+  steemAuth,
+  type SteemAuthOptions,
+  type SteemAuthResult,
+} from './steemAuth';
+
 // All-in-one: session + rendered QR in one call
 export {
   createQrSession,

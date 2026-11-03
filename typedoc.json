@@ -1,0 +1,21 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts", "src/react.ts"],
+  "out": "site",
+  "name": "@steempro/steemauth-qr",
+  "includeVersion": true,
+  "readme": "README.md",
+  "sort": ["alphabetical"],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "githubPages": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/faisalamin9696/steemauth-qr",
+    "npm": "https://www.npmjs.com/package/@steempro/steemauth-qr"
+  },
+  "validation": {
+    "notExported": false,
+    "invalidLink": false,
+    "notDocumented": false
+  }
+}
