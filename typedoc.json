@@ -1,6 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts", "src/react.ts"],
+  "tsconfig": "tsconfig.docs.json",
   "out": "site",
   "name": "@steempro/steemauth-qr",
   "includeVersion": true,
