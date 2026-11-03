@@ -210,6 +210,15 @@ relay can neither read messages nor inject one that verifies.
 handshake) · `request` (id, ops ≤ 20, sign?, meta?, exp?) · `result` (id,
 ok, txId?, error?, signature?) · `cancel` · `revoke` · `ping`/`pong`.
 
+**Revocation watch** (Supabase-backed): after the handshake, the package
+sends `{ t:"watch", sid }` to the relay. The relay polls Supabase for
+`revoked_at` changes on that sid (batched, only while watchers exist)
+and pushes `{ t:"revoked", sid, reason }` when the user revokes from the
+mobile app's Sessions tab. Credentials never leave the relay process.
+One-shot: once revoked, the sid is removed from watchers. This works even
+after the relay room expires — the watch connection is independent of the
+room lifecycle.
+
 v1/v2 payloads are refused by the version check on both sides.
 
 ## Security, in five bullets
@@ -220,6 +229,13 @@ v1/v2 payloads are refused by the version check on both sides.
 - no credentials anywhere: relay URL is a public constant, tokens are
   hashed server-side; a test fails the build if a JWT ever lands in the repo
 - requests validate against the phone's exact rules *before* sending
+
+**Supabase revocation watch security**: credentials stay in the relay
+process only (no endpoint exposes them, no frame carries them). Sid format
+is validated (UUID regex) before any query. Poll runs only while watchers
+exist (zero cost when idle). One-shot: revoked sids are removed from
+watchers immediately. Rate limiting: the existing per-connection token
+bucket applies to `watch` frames.
 
 ## Development <a name="development"></a>
 

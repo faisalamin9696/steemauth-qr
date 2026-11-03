@@ -306,7 +306,9 @@ export class SteemAuthSession {
         ttlMs: Math.max(this.payload.exp - Date.now(), 30_000) + 120_000,
       },
       handshakeTimeoutMs: this.options.subscribeTimeoutMs ?? 15_000,
+      sid: this.payload.sid,
       onMessage: (payload) => this.handleMessage(payload),
+      onRevoked: (reason) => this.applyRevocation(reason),
       onStatus: (status) => {
         if (this.disposed) return;
         if (status === 'connected') {

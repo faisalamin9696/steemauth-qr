@@ -38,9 +38,20 @@ export interface RelayPlaneOptions {
   create?: { appHash: string; phoneHash: string; ttlMs: number };
   /** Handshake budget (create + join + first pull). */
   handshakeTimeoutMs?: number;
+  /**
+   * Session id for Supabase revocation watch — sent as `{ t:"watch", sid }`
+   * after the handshake completes. The relay polls Supabase for revoked_at
+   * changes and pushes `{ t:"revoked" }` when detected.
+   */
+  sid?: string;
   /** Raw envelope delivered by the peer — verify with `openMessage`. */
   onMessage(payload: unknown): void;
   onStatus?(status: RelayPlaneStatus): void;
+  /**
+   * Called when the relay detects the session was revoked in Supabase
+   * (the user revoked from the mobile app's Sessions tab).
+   */
+  onRevoked?(reason: string): void;
 }
 
 export interface MessagePlane {
@@ -106,7 +117,7 @@ function errFor(code: string, phase: 'handshake' | 'send'): SteemAuthError {
 }
 
 export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
-  const { relayUrl, room, token, create, onMessage, onStatus } = options;
+  const { relayUrl, room, token, create, sid, onMessage, onStatus, onRevoked } = options;
   const handshakeTimeoutMs = options.handshakeTimeoutMs ?? 15_000;
 
   let ws: WebSocket | null = null;
@@ -166,6 +177,8 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
     // Explicit handshake phases: create → join → rows. (The relay acks each
     // step in order; pulling before the join would get `not_member`.)
     let phase: 'create' | 'join' | 'rows' = create ? 'create' : 'join';
+    /** True after we send a `watch` frame — its error response is optional (Supabase may not be configured). */
+    let watchSent = false;
 
     handshakeTimer = setTimeout(() => {
       failHandshake(new SteemAuthError('plane-timeout', 'Timed out joining the relay room — check the relayUrl and network'));
@@ -194,6 +207,8 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
         rows?: Array<[number, unknown]>;
         seq?: number;
         payload?: unknown;
+        sid?: string;
+        reason?: string;
       };
       try {
         frame = JSON.parse(String(ev.data));
@@ -224,6 +239,13 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
             attempts = 0;
             status('connected');
             w.resolve();
+            // Send watch frame for Supabase revocation (after handshake).
+            // This is a one-shot: the relay acks with "watched" and then
+            // pushes "revoked" when Supabase detects revoked_at.
+            if (sid && sock.readyState === 1) {
+              watchSent = true;
+              sock.send(JSON.stringify({ t: 'watch', sid }));
+            }
           }
           break;
         }
@@ -236,7 +258,25 @@ export function createRelayPlane(options: RelayPlaneOptions): MessagePlane {
           resolveSend();
           break;
         }
+        case 'watched':
+          // Ack for the watch frame — no-op, the relay will push "revoked" later.
+          watchSent = false;
+          break;
+        case 'revoked': {
+          // Supabase revocation detected — the user revoked this session
+          // from the mobile app's Sessions tab.
+          if (typeof frame.reason === 'string' && onRevoked) {
+            onRevoked(frame.reason);
+          }
+          break;
+        }
         case 'err': {
+          if (watchSent) {
+            // Error in response to watch frame — ignore it (watch is optional,
+            // Supabase may not be configured on the relay).
+            watchSent = false;
+            break;
+          }
           if (handshakeWaiter) {
             failHandshake(errFor(frame.code ?? 'bad_shape', 'handshake'));
           } else {
