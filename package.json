@@ -1,6 +1,6 @@
 {
   "name": "@steempro/steemauth-qr",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Generate SteemAuthenticator QR sessions and request Steem actions (broadcast/vote/transfer/...) from the browser, SteemKeychain-style. Mobile approval + on-device signing via the SteemAuthenticator app.",
   "keywords": [
     "steem",
